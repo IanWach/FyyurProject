@@ -8,6 +8,8 @@ import babel
 from flask import Flask, render_template, request, Response, flash, redirect, url_for
 from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import load_only
+from sqlalchemy import distinct
 import logging
 from logging import Formatter, FileHandler
 from flask_wtf import Form
@@ -63,7 +65,7 @@ def venues():
   response_data = []
 
   try:
-    city_state = db.session.query.distinct(Venue.city), Venue.state.all()
+    city_state = db.session.query(distinct(Venue.city), Venue.state).all()
 
     date_today = datetime.datetime.now()
     for location in city_state:
@@ -115,7 +117,10 @@ def search_venues():
   fields = ["id", "name"]
 
   search_results_venue = (
-    db.session.query(Venue).filter(Venue.name.ilike(f'%{searches}%')).options.load_only(fields).all()
+    db.session.query(Venue)
+        .filter(Venue.name.ilike(f"%{searches}%"))
+        .options(load_only(*fields))
+        .all()
   )
 
   response["count"] = len(search_results_venue)
