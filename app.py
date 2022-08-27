@@ -3,6 +3,7 @@
 #----------------------------------------------------------------------------#
 
 import json
+from unicodedata import name
 import dateutil.parser
 import babel
 from flask import Flask, render_template, request, Response, flash, redirect, url_for
@@ -154,20 +155,20 @@ def show_venue(venue_id):
 
     date_today = datetime.datetime.now()
 
-    past_shows_info = shows.filter(Show.Start_Time < date_today)
+    past_shows_info = shows.filter(Show.start_time < date_today)
     past_shows = []
     for show in past_shows_info:
-      artist_info = Artist.query.get(show.Artist_ID)
+      artist_info = Artist.query.get(show.artist_id)
       show_data = {
         "artist_id" : artist_info.id,
         "artist_name" : artist_info.name,
         "artist_image_link" : artist_info.image_link,
-        "start_time" : str(show.Start_Time)
+        "start_time" : str(show.start_time)
       }
     
     past_shows.append(show_data)
 
-    upcoming_shows_info = shows.filter(Show.Start_Time >= date_today).all()
+    upcoming_shows_info = shows.filter(Show.start_time >= date_today).all()
     upcoming_shows = []
     for show in upcoming_shows_info:
       artist_info = Artist.query.get(show.artist_id)
@@ -175,7 +176,7 @@ def show_venue(venue_id):
         "artist_id" : artist_info.id,
         "artist_name" : artist_info.name,
         "artist_image_link" : artist_info.image_link,
-        "start_time" : str(show.Start_Time)
+        "start_time" : str(show.start_time)
       }
       upcoming_shows.append(show_data)
 
@@ -218,7 +219,18 @@ def create_venue_form():
 def create_venue_submission():
   # TODO: insert form data as a new Venue record in the db, instead
   # TODO: modify data to be the data object returned from db insertion
-
+  #error = false
+  #body ={}
+  #try:
+   #name = request.form.get("name")
+    #city = request.form.get("city")
+    #state = request.form.get("state")
+    #address = request.form.get("address")
+    #phone = request.form.get("phone")
+    #image_link = request.form.get("image_link")
+    #facebook_link = request.form.get("facebook_link")
+    #name = request.form.get("name")
+    
   # on successful db insert, flash success
   flash('Venue ' + request.form['name'] + ' was successfully listed!')
   # TODO: on unsuccessful db insert, flash an error instead.
