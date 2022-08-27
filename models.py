@@ -23,7 +23,7 @@ class Venue(db.Model):
 #db.create_all()
   
   #Additional Fields
-  genre = db.Column(db.String(50), nullable=False)
+  genres = db.Column(db.String(50), nullable=False)
   website_link = db.Column(db.String(120), nullable =False)
   seeking_description = db.Column(db.String(500), nullable =True, default="")
   seeking_talent = db.Column(db.Boolean, nullable = False)
