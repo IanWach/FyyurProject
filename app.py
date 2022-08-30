@@ -251,8 +251,8 @@ def create_venue_submission():
     )
 
     genres_in_venue = []
-    for gen in genres:
-      current_gen = Venue(gen=gen)
+    for genre in genres:
+      current_gen = Venue(genre=genre)
       current_gen.venue = new_venue
       genres_in_venue.append(current_gen)
 
@@ -607,12 +607,40 @@ def create_artist_submission():
   # called upon submitting the new artist listing form
   # TODO: insert form data as a new Venue record in the db, instead
   # TODO: modify data to be the data object returned from db insertion
+  try:
+    name = request.form.get("name")
+    city = request.form.get("city")
+    state = request.form.get("state")
+    phone = request.form.get("phone")
+    genres =request.form.getlist("genres")
+    facebook_link = request.form.get("facebook_link")
 
+    new_artist = Artist(
+      name=name, city=city, phone=phone, facebook_link=facebook_link
+    )
+
+    genres_for_artist = []
+    for g in genres:
+      current_g = Artist(genre=g)
+      current_g.artist = new_artist
+      genres_for_artist.append(current_g)
+
+    db.session.add(new_artist)
+    db.session.commit()
+
+
+  except:
+    db.session.rollback()
+    flash("We experienced an error for Artist " + request.form.get("name"))
+
+  finally:
+    db.session.close()
+    
   # on successful db insert, flash success
-  flash('Artist ' + request.form['name'] + ' was successfully listed!')
+  # flash('Artist ' + request.form['name'] + ' was successfully listed!')
   # TODO: on unsuccessful db insert, flash an error instead.
   # e.g., flash('An error occurred. Artist ' + data.name + ' could not be listed.')
-  return render_template('pages/home.html')
+    return render_template('pages/home.html')
 
 
 #  Shows
@@ -622,6 +650,35 @@ def create_artist_submission():
 def shows():
   # displays list of shows at /shows
   # TODO: replace with real venues data.
+  data = {}
+  try:
+    shows = Show.query.all()
+    for show in shows:
+      venue_id = show.venue_id
+      artist_id = show.artist_id
+      artist = Artist.query.get(artist_id)
+      
+      every_show_data ={
+        "venue_id": venue_id,
+        "venue_name": Venue.query.get(venue_id).name,
+        "artist_id" : artist_id,
+        "artist_image_link": artist.image_link,
+        "artist_name": artist.name,
+        "start_time" : str(show.start_time),
+      }
+
+      data.append(every_show_data)
+
+  except:
+    db.session.rollback()
+    print(sys.exc_info())
+    flash("Something was not right")
+
+  finally:
+    return render_template('pages/shows.html', shows=data)
+
+
+"""
   data=[{
     "venue_id": 1,
     "venue_name": "The Musical Hop",
@@ -658,7 +715,9 @@ def shows():
     "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
     "start_time": "2035-04-15T20:00:00.000Z"
   }]
-  return render_template('pages/shows.html', shows=data)
+
+  """
+
 
 @app.route('/shows/create')
 def create_shows():
@@ -670,9 +729,54 @@ def create_shows():
 def create_show_submission():
   # called to create new shows in the db, upon submitting new show listing form
   # TODO: insert form data as a new Show record in the db, instead
+  errors = {"artist_id_error":False, "venue_id_error":False}
 
+  try:
+    artist_id = request.form.get("artist_id")
+    venue_id = request.form.get("venue_id")
+    start_time = request.form.get("start_time")
+
+    find_artist = Artist.query.get(artist_id)
+    if find_artist is None:
+      errors["artist_id_error":] = True
+
+    find_venue = Venue.query.get(artist_id)
+    if find_venue is None:
+      errors["venue_id_error"] = True
+
+
+    if find_venue is not None and find_artist is not None:
+      another_show = Show(
+        artist_id=find_artist.id,
+        venue_id=find_venue.id,
+        start_time=start_time,
+      )
+
+      db.session.add(another_show)
+      db.session.commit()
+
+      flash("You have scheduled the show by: " + find_artist.name)
+
+  except:
+    db.session.rollback()
+    flash("Something went wrong. Try Again Letter!")
+
+  finally:
+    db.session.close()
+  
+
+  if errors["artist_id_error"] is True:
+    flash(
+      "No artist with Id: " +  request.form.get("artist_id") + " Found"
+    )
+  elif errors["venue_id_error"] is True:
+    flash(
+      "No venue with Id: " +  request.form.get("venue_id") + " Found"
+    )
+
+   
   # on successful db insert, flash success
-  flash('Show was successfully listed!')
+    flash('Show was successfully listed!')
   # TODO: on unsuccessful db insert, flash an error instead.
   # e.g., flash('An error occurred. Show could not be listed.')
   # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
