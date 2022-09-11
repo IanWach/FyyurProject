@@ -14,8 +14,9 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import load_only
 from sqlalchemy import distinct
 import logging
-from logging import Formatter, FileHandler
+from logging import Formatter, FileHandler, exception
 from flask_wtf import Form
+from flask_wtf import CSRFProtect
 from forms import *
 from flask_migrate import Migrate
 from models import db, Venue, Artist, Show
@@ -84,7 +85,7 @@ def venues():
         venue_name = v.name
 
         upcoming_shows = (
-          Show.query.filter_by(venue_ID=venue_ID).filter(Show.Start_Time > date_today).all()
+          db.session.query(Show).join(Venue).filter_by(venue_ID==venue_ID).filter(Show.start_time > date_today).all()
         )
 
         venue_data ={
@@ -146,14 +147,14 @@ def show_venue(venue_id):
 
   try:
     view_venue = Venue.query.get(venue_id)
-
+    #view_venue = Venue.query.filter_by(venue_id=venue_ids).all()
     if view_venue is None:
       return not_found_error(404)
 
     genres = []
     for g in view_venue.genres:
       genres.append(g.genre)
-
+    print(genres)
     shows = Show.query.filter_by(Venue_ID=venue_id)
 
     date_today = datetime.datetime.now()
@@ -193,7 +194,7 @@ def show_venue(venue_id):
       "phone": view_venue.phone,
       "website": view_venue.website_link,
       "facebook_link": view_venue.facebook_link,
-      "seeking_talent": view_venue.seeking_artist,
+      "seeking_talent": view_venue.seeking_talent,
       "seeking_description": view_venue.seeking_description,
       "image_link": view_venue.image_link,
       "past_shows": past_shows,
@@ -224,20 +225,24 @@ def create_venue_submission():
   # TODO: modify data to be the data object returned from db insertion
 
   try:
+    form = VenueForm(request.form)
+
+    venue = Venue(
+      name = form.name.data,
+      city = form.city.data,
+      state = form.state.data,
+      address = form.address.data,
+      phone = form.phone.data,
+      facebook_link = form.facebook_link.data,
+      website_link = form.website_link.data,
+      genres = form.genres.data,
+      seeking_description = form.seeking_description.data,
+      seeking_talent = form.seeking_talent.data,
+      image_link = form.image_link.data,
+    )
+
     
-    name = request.form.get('name')
-    city = request.form.get('city')
-    state = request.form.get('state')
-    address = request.form.get('address')
-    phone = request.form.get('phone')
-    facebook_link = request.form.get('facebook_link')
-    website_link = request.form.get('website_link')
-    genres = request.form.getlist('genres')
-    seeking_description = request.form.get('seeking_description')
-    seeking_talent = request.form.get('seeking_talent')
-    image_link = request.form.get('image_link')
-    
-    new_venue = Venue(
+    """ new_venue = Venue(
       name=name,
       city=city,
       state=state,
@@ -252,22 +257,23 @@ def create_venue_submission():
 
     genres_in_venue = []
     for genre in genres:
-      current_gen = Venue(genre=genre)
+      current_gen = Venue(genres=genre)
       current_gen.venue = new_venue
       genres_in_venue.append(current_gen)
-
-    db.session.add(new_venue)
+    """
+    db.session.add(venue)
     db.session.commit()
 
-    db.session.refresh(new_venue)
-    flash("Venue" + new_venue.name + " of City:" + new_venue.city + " was Listed in the List of Venues" )
+    #db.session.refresh(venue)
+    #flash("Venue" + new_venue.name + " of City:" + new_venue.city + " was Listed in the List of Venues" )
   # on successful db insert, flash success
-    flash('Venue ' + request.form['name'] + ' was successfully listed!')
+    #flash('Venue ' + request.form['name'] + ' was successfully listed!')
 
-  except:
+  except Exception as err:
+    flash('An error occured for: {0}.Error: {1}'.format(venue.name, err))
     db.session.rollback()
-    print(sys.exc_info())
-    flash("We encountered an error for Venue "+ request.form.get("name") +" it could not be listed")
+    #print(sys.exc_info())
+    #flash("We encountered an error for Venue "+ request.form.get("name") +" it could not be listed")
 # TODO: on unsuccessful db insert, flash an error instead.
 # e.g., flash('An error occurred. Venue ' + data.name + ' could not be listed.')
 
@@ -560,7 +566,7 @@ def edit_venue(venue_id):
     request_venue_to_update.facebook_link = facebook_link
     request_venue_to_update.website_link = website_link 
     request_venue_to_update.seeking_description = seeking_description
-    request_venue_to_update.seeking_venue = seeking_talent
+    request_venue_to_update.seeking_talent = seeking_talent
     request_venue_to_update.image_link = image_link
   # TODO: take values from the form submitted, and update existing
   # artist record with ID <artist_id> using the new attributes
@@ -614,9 +620,15 @@ def create_artist_submission():
     phone = request.form.get("phone")
     genres =request.form.getlist("genres")
     facebook_link = request.form.get("facebook_link")
+    website_link = request.form.get("website_link")
+    image_link = request.form.get("image_link")
+    seeking_venue = request.form.get("seeking_venue")
+    seeking_description = request.form.get("seeking_description")
 
     new_artist = Artist(
-      name=name, city=city, phone=phone, facebook_link=facebook_link
+      name=name, city=city,state=state ,phone=phone, facebook_link=facebook_link, 
+      website_link=website_link, image_link=image_link, seeking_venue=seeking_venue,
+      seeking_description=seeking_description,
     )
 
     genres_for_artist = []
@@ -740,7 +752,7 @@ def create_show_submission():
     if find_artist is None:
       errors["artist_id_error":] = True
 
-    find_venue = Venue.query.get(artist_id)
+    find_venue = Venue.query.get(venue_id)
     if find_venue is None:
       errors["venue_id_error"] = True
 
@@ -773,7 +785,9 @@ def create_show_submission():
     flash(
       "No venue with Id: " +  request.form.get("venue_id") + " Found"
     )
+  #Enable CSRF Protection Global
 
+  #class flask_wtf.csrf.CSRFProtect(app=none)
    
   # on successful db insert, flash success
     flash('Show was successfully listed!')

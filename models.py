@@ -23,10 +23,10 @@ class Venue(db.Model):
 #db.create_all()
   
   #Additional Fields
-  genres = db.Column(db.String(50), nullable=False)
+  genres = db.Column(db.String(500), nullable=False)
   website_link = db.Column(db.String(120), nullable =False)
   seeking_description = db.Column(db.String(500), nullable =True, default="")
-  seeking_talent = db.Column(db.Boolean, default=False, nullable = False )
+  seeking_talent = db.Column(db.Boolean, nullable = False )
   venue_show = db.relationship('Show', backref='venue', lazy=True)
 
 def __repr__(self):
@@ -49,7 +49,7 @@ class Artist(db.Model):
   #Additional Fields
   website_link = db.Column(db.String(120))
   seeking_description = db.Column(db.String(500))
-  seeking_venue = db.Column(db.Boolean, nullable = False, default=False)
+  seeking_venue = db.Column(db.Boolean, nullable = False)
   artist_show = db.relationship('Show', backref='artist', lazy=True)
 
 def __repr__(self):
